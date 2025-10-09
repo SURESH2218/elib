@@ -15,21 +15,30 @@ const userController = async (req: Request, res: Response, next: NextFunction) =
   }
 
   //Database call
-  const user = await userModel.findOne({ email });
+  try {
+    const user = await userModel.findOne({ email });
 
-  if (user) {
-    const error = createHttpError(400, "User already Exists with this email");
-    return next(error);
+    if (user) {
+      const error = createHttpError(400, "User already Exists with this email");
+      return next(error);
+    }
+  } catch {
+    return next(createHttpError(500, "Error while checking the email"));
   }
 
   //password -> hash
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const newUser = await userModel.create({
-    name,
-    email,
-    password: hashedPassword,
-  });
+  let newUser;
+  try {
+    newUser = await userModel.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+  } catch {
+    return next(createHttpError(500, "Error while creating the user"));
+  }
 
   //Token generation - jwt
   const token = jwt.sign(
