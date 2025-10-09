@@ -5,6 +5,7 @@ const _config = {
   env: process.env.NODE_ENV,
   port: process.env.PORT || 3000,
   databaseUrl: process.env.MONGO_CONNECTION_STRING as string,
+  jwtsecret: process.env.JWT_SECRET,
 };
 
 export default _config;
