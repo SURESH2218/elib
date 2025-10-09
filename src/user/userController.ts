@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import _config from "../config/config.js";
 
-const userController = async (req: Request, res: Response, next: NextFunction) => {
+const userRegister = async (req: Request, res: Response, next: NextFunction) => {
   const { name, email, password } = req.body;
 
   //validations
@@ -57,4 +57,46 @@ const userController = async (req: Request, res: Response, next: NextFunction) =
   });
 };
 
-export default userController;
+const userLogin = async (req: Request, res: Response, next: NextFunction) => {
+  const { email, password } = req.body;
+  //validations
+  if (!email || !password) {
+    return next(createHttpError(400, "Please enter all fields"));
+  }
+
+  let user;
+  //Database check whether email exists or not
+  try {
+    user = await userModel.findOne({ email });
+    if (!user) {
+      return next(createHttpError(400, "Please enter valid email address and password"));
+    }
+  } catch {
+    return next(createHttpError(500, "error while checking for the email address"));
+  }
+
+  try {
+    const isValidated = await bcrypt.compare(password, user.password);
+    if (!isValidated) {
+      return next(createHttpError(400, "Please Enter Valid email address and password"));
+    }
+  } catch {
+    return next(createHttpError(500, "Something went wrong while checking the email and password"));
+  }
+
+  //Token generation - jwt
+  const token = jwt.sign(
+    {
+      sub: user._id,
+    },
+    _config.jwtsecret as string,
+    { expiresIn: "7d" }
+  );
+
+  return res.status(200).json({
+    accessToken: token,
+    message: "user logged in successfully",
+  });
+};
+
+export { userRegister, userLogin };
