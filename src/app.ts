@@ -1,10 +1,17 @@
+import cors from "cors";
 import express from "express";
-import globalErrorHandler from "./middlewares/globalErrorHandler.js";
+import _config from "./config/config.js";
 import userRouter from "./user/userRouter.js";
 import bookRouter from "./book/bookRouter.js";
+import globalErrorHandler from "./middlewares/globalErrorHandler.js";
 
 const app = express();
 
+app.use(
+  cors({
+    origin: _config.frontendDomain,
+  })
+);
 app.use(express.json());
 
 app.get("/", (req, res) => {
