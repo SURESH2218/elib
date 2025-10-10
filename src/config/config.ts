@@ -6,6 +6,9 @@ const _config = {
   port: process.env.PORT || 3000,
   databaseUrl: process.env.MONGO_CONNECTION_STRING as string,
   jwtsecret: process.env.JWT_SECRET,
+  cloudinaryCloud: process.env.CLOUD_NAME,
+  cloudinaryApiKey: process.env.CLOUD_API_KEY,
+  cloudinarApiSecret: process.env.CLOUD_API_SECRET,
 };
 
 export default _config;
