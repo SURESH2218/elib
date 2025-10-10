@@ -1,12 +1,22 @@
+import fs from "fs";
 import path from "node:path";
+import bookModel from "./bookModel.js";
 import { fileURLToPath } from "node:url";
-import cloudinary from "../config/cloudinary.js";
 import createHttpError from "http-errors";
+import cloudinary from "../config/cloudinary.js";
 import { type Request, type Response, type NextFunction } from "express";
+
+const getUploadPath = (filename: string) =>
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "../../public/data/uploads", filename);
 
 const createBookController = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const { title, genre } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+    if (!title || !genre) {
+      return next(createHttpError(400, "All the fields are required"));
+    }
     if (!files.coverImage?.[0]) {
       return next(createHttpError(400, "cover image is required"));
     }
@@ -17,11 +27,7 @@ const createBookController = async (req: Request, res: Response, next: NextFunct
 
     const uploadFile = async (file: Express.Multer.File, folder: string) => {
       const mimeType = file.mimetype.split("/").at(-1);
-      const filePath = path.join(
-        path.dirname(fileURLToPath(import.meta.url)),
-        "../../public/data/uploads",
-        file.filename
-      );
+      const filePath = getUploadPath(file.filename);
       return cloudinary.uploader.upload(filePath, {
         public_id: file.filename,
         folder,
@@ -34,9 +40,22 @@ const createBookController = async (req: Request, res: Response, next: NextFunct
       uploadFile(files.file[0], "book-pdfs"),
     ]);
 
-    return res.json({
-      coverImageUrl: uploadResult[0]?.url,
-      bookFileUrl: uploadResult[1]?.url,
+    const book = await bookModel.create({
+      title,
+      genre,
+      author: "68e7f1286f91d13a6ea412d9",
+      coverImage: uploadResult[0].url,
+      file: uploadResult[1].url,
+    });
+
+    // delete temp files
+    await Promise.all([
+      fs.promises.unlink(getUploadPath(files.coverImage[0].filename)),
+      fs.promises.unlink(getUploadPath(files.file[0].filename)),
+    ]);
+
+    return res.status(201).json({
+      book,
     });
   } catch (error) {
     return next(createHttpError(500, "Error uploading files to cloudinary"));
