@@ -12,10 +12,10 @@ const getUploadPath = (filename: string) =>
 
 const createBookController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { title, genre } = req.body;
+    const { title, genre, description } = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    if (!title || !genre) {
+    if (!title || !genre || !description) {
       return next(createHttpError(400, "All the fields are required"));
     }
     if (!files.coverImage?.[0]) {
@@ -46,6 +46,7 @@ const createBookController = async (req: Request, res: Response, next: NextFunct
     const book = await bookModel.create({
       title,
       genre,
+      description,
       author: _req.userId,
       coverImage: uploadResult[0].url,
       file: uploadResult[1].url,
@@ -67,12 +68,12 @@ const createBookController = async (req: Request, res: Response, next: NextFunct
 
 const updateBookController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { title, genre } = req.body;
+    const { title, genre, description } = req.body;
     const bookId = req.params.bookId;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
     // Validate if at least one field is being updated
-    if (!title && !genre && !files) {
+    if (!title && !genre && !files && !description) {
       return next(createHttpError(400, "Nothing to update"));
     }
 
@@ -135,6 +136,7 @@ const updateBookController = async (req: Request, res: Response, next: NextFunct
       {
         title: title || book.title,
         genre: genre || book.genre,
+        description: description || book.description,
         coverImage: uploadResults.coverImage || book.coverImage,
         file: uploadResults.file || book.file,
       },
