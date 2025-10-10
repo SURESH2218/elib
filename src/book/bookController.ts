@@ -159,7 +159,12 @@ const getMyBooksController = async (req: Request, res: Response, next: NextFunct
     const skip = (page - 1) * limit;
 
     const [books, totalBooks] = await Promise.all([
-      bookModel.find({ author: _req.userId }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      bookModel
+        .find({ author: _req.userId })
+        .populate("author", "name")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
       bookModel.countDocuments({ author: _req.userId }),
     ]);
 
