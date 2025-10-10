@@ -154,11 +154,25 @@ const updateBookController = async (req: Request, res: Response, next: NextFunct
 const getMyBooksController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const _req = req as AuthRequest;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 15;
+    const skip = (page - 1) * limit;
 
-    const books = await bookModel.find({ author: _req.userId }).sort({ createdAt: -1 });
+    const [books, totalBooks] = await Promise.all([
+      bookModel.find({ author: _req.userId }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      bookModel.countDocuments({ author: _req.userId }),
+    ]);
+
     return res.json({
       books,
-      total: books.length,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalBooks / limit),
+        totalBooks,
+        booksPerPage: limit,
+        hasNextPage: page * limit < totalBooks,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     return next(createHttpError(500, "Error fetching books"));
@@ -167,11 +181,25 @@ const getMyBooksController = async (req: Request, res: Response, next: NextFunct
 
 const getAllBooksController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const books = await bookModel.find().populate("author", "name").sort({ createdAt: -1 });
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 15;
+    const skip = (page - 1) * limit;
+
+    const [books, totalBooks] = await Promise.all([
+      bookModel.find().populate("author", "name").sort({ createdAt: -1 }).skip(skip).limit(limit),
+      bookModel.countDocuments(),
+    ]);
 
     return res.json({
       books,
-      total: books.length,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalBooks / limit),
+        totalBooks,
+        booksPerPage: limit,
+        hasNextPage: page * limit < totalBooks,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     return next(createHttpError(500, "Error fetching books"));
