@@ -178,4 +178,65 @@ const getAllBooksController = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-export { createBookController, updateBookController, getMyBooksController, getAllBooksController };
+const getBookByIdController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { bookId } = req.params;
+
+    const book = await bookModel.findById(bookId).populate("author", "name");
+
+    if (!book) {
+      return next(createHttpError(404, "Book not found"));
+    }
+
+    return res.json({ book });
+  } catch (error) {
+    return next(createHttpError(500, "Error fetching book"));
+  }
+};
+
+const deleteBookController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { bookId } = req.params;
+    const _req = req as AuthRequest;
+
+    const book = await bookModel.findById(bookId);
+
+    if (!book) {
+      return next(createHttpError(404, "Book not found"));
+    }
+
+    // Check if the logged-in user is the author
+    if (book.author.toString() !== _req.userId) {
+      return next(createHttpError(401, "You can only delete your own books"));
+    }
+
+    // Delete files from Cloudinary
+    const coverImagePublicId = book.coverImage.split("/").slice(-2).join("/").split(".")[0];
+    const filePublicId = book.file.split("/").slice(-2).join("/").split(".")[0];
+
+    await Promise.all([
+      cloudinary.uploader.destroy(`book-covers/${coverImagePublicId}`),
+      cloudinary.uploader.destroy(`book-pdfs/${filePublicId}`),
+    ]);
+
+    // Delete book from database
+    await bookModel.findByIdAndDelete(bookId);
+
+    return res.json({
+      message: "Book deleted successfully",
+      deletedBookId: bookId,
+    });
+  } catch (error) {
+    console.error("Delete book error:", error);
+    return next(createHttpError(500, "Error deleting book"));
+  }
+};
+
+export {
+  createBookController,
+  updateBookController,
+  getMyBooksController,
+  getAllBooksController,
+  getBookByIdController,
+  deleteBookController,
+};

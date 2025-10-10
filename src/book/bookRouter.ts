@@ -8,6 +8,8 @@ import {
   updateBookController,
   getMyBooksController,
   getAllBooksController,
+  getBookByIdController,
+  deleteBookController,
 } from "./bookController.js";
 import authenticate from "../middlewares/authenticate.js";
 
@@ -92,8 +94,10 @@ bookRouter.patch(
   updateBookController
 );
 
+// Public routes
 bookRouter.get("/", getAllBooksController);
 bookRouter.get("/my-books", authenticate, getMyBooksController);
-
+bookRouter.get("/:bookId", getBookByIdController);
+bookRouter.delete("/:bookId", authenticate, deleteBookController);
 
 export default bookRouter;
