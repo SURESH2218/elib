@@ -3,7 +3,12 @@ import path from "node:path";
 import multer from "multer";
 import { fileURLToPath } from "url";
 import createHttpError from "http-errors";
-import { createBookController, updateBookController } from "./bookController.js";
+import {
+  createBookController,
+  updateBookController,
+  getMyBooksController,
+  getAllBooksController,
+} from "./bookController.js";
 import authenticate from "../middlewares/authenticate.js";
 
 const bookRouter = express.Router();
@@ -86,5 +91,9 @@ bookRouter.patch(
   handleMulterError,
   updateBookController
 );
+
+bookRouter.get("/", getAllBooksController);
+bookRouter.get("/my-books", authenticate, getMyBooksController);
+
 
 export default bookRouter;

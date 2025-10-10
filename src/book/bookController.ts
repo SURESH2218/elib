@@ -151,4 +151,31 @@ const updateBookController = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-export { createBookController, updateBookController };
+const getMyBooksController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const _req = req as AuthRequest;
+
+    const books = await bookModel.find({ author: _req.userId }).sort({ createdAt: -1 });
+    return res.json({
+      books,
+      total: books.length,
+    });
+  } catch (error) {
+    return next(createHttpError(500, "Error fetching books"));
+  }
+};
+
+const getAllBooksController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const books = await bookModel.find().populate("author", "name").sort({ createdAt: -1 });
+
+    return res.json({
+      books,
+      total: books.length,
+    });
+  } catch (error) {
+    return next(createHttpError(500, "Error fetching books"));
+  }
+};
+
+export { createBookController, updateBookController, getMyBooksController, getAllBooksController };
