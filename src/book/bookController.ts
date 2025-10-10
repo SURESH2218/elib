@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import createHttpError from "http-errors";
 import cloudinary from "../config/cloudinary.js";
 import { type Request, type Response, type NextFunction } from "express";
+import type { AuthRequest } from "../middlewares/authenticate.js";
 
 const getUploadPath = (filename: string) =>
   path.join(path.dirname(fileURLToPath(import.meta.url)), "../../public/data/uploads", filename);
@@ -40,10 +41,12 @@ const createBookController = async (req: Request, res: Response, next: NextFunct
       uploadFile(files.file[0], "book-pdfs"),
     ]);
 
+    const _req = req as AuthRequest;
+
     const book = await bookModel.create({
       title,
       genre,
-      author: "68e7f1286f91d13a6ea412d9",
+      author: _req.userId,
       coverImage: uploadResult[0].url,
       file: uploadResult[1].url,
     });

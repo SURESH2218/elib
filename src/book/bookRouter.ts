@@ -4,6 +4,7 @@ import multer from "multer";
 import { fileURLToPath } from "url";
 import createHttpError from "http-errors";
 import { createBookController } from "./bookController.js";
+import authenticate from "../middlewares/authenticate.js";
 
 const bookRouter = express.Router();
 
@@ -54,6 +55,7 @@ const handleMulterError = (
 
 bookRouter.post(
   "/",
+  authenticate,
   upload.fields([
     {
       name: "coverImage",
