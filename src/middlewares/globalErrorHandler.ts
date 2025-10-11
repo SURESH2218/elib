@@ -12,8 +12,8 @@ const globalErrorHandler = (
   return res.status(statusCode).json({
     error: {
       message: err.message,
-      errorStack: _config.env == "development" ? err.stack : "",
-    },
+      errorStack: _config.env == "development" ? err.stack : ""
+    }
   });
 };
 

@@ -34,7 +34,7 @@ const userRegister = async (req: Request, res: Response, next: NextFunction) => 
     newUser = await userModel.create({
       name,
       email,
-      password: hashedPassword,
+      password: hashedPassword
     });
   } catch {
     return next(createHttpError(500, "Error while creating the user"));
@@ -43,7 +43,7 @@ const userRegister = async (req: Request, res: Response, next: NextFunction) => 
   //Token generation - jwt
   const token = jwt.sign(
     {
-      sub: newUser._id,
+      sub: newUser._id
     },
     _config.jwtsecret as string,
     { expiresIn: "7d" }
@@ -53,7 +53,7 @@ const userRegister = async (req: Request, res: Response, next: NextFunction) => 
     _id: newUser._id,
     name: newUser.name,
     accessToken: token,
-    message: "User created Successfully",
+    message: "User created Successfully"
   });
 };
 
@@ -87,7 +87,7 @@ const userLogin = async (req: Request, res: Response, next: NextFunction) => {
   //Token generation - jwt
   const token = jwt.sign(
     {
-      sub: user._id,
+      sub: user._id
     },
     _config.jwtsecret as string,
     { expiresIn: "7d" }
@@ -95,7 +95,7 @@ const userLogin = async (req: Request, res: Response, next: NextFunction) => {
 
   return res.status(200).json({
     accessToken: token,
-    message: "user logged in successfully",
+    message: "user logged in successfully"
   });
 };
 

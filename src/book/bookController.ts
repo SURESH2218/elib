@@ -32,13 +32,13 @@ const createBookController = async (req: Request, res: Response, next: NextFunct
       return cloudinary.uploader.upload(filePath, {
         public_id: file.filename,
         folder,
-        format: mimeType as "jpg" | "pdf",
+        format: mimeType as "jpg" | "pdf"
       });
     };
 
     const uploadResult = await Promise.all([
       uploadFile(files.coverImage[0], "book-covers"),
-      uploadFile(files.file[0], "book-pdfs"),
+      uploadFile(files.file[0], "book-pdfs")
     ]);
 
     const _req = req as AuthRequest;
@@ -49,17 +49,17 @@ const createBookController = async (req: Request, res: Response, next: NextFunct
       description,
       author: _req.userId,
       coverImage: uploadResult[0].url,
-      file: uploadResult[1].url,
+      file: uploadResult[1].url
     });
 
     // delete temp files
     await Promise.all([
       fs.promises.unlink(getUploadPath(files.coverImage[0].filename)),
-      fs.promises.unlink(getUploadPath(files.file[0].filename)),
+      fs.promises.unlink(getUploadPath(files.file[0].filename))
     ]);
 
     return res.status(201).json({
-      book,
+      book
     });
   } catch (error) {
     return next(createHttpError(500, "Error uploading files to cloudinary"));
@@ -99,7 +99,7 @@ const updateBookController = async (req: Request, res: Response, next: NextFunct
         return cloudinary.uploader.upload(filePath, {
           public_id: file.filename,
           folder,
-          format: mimeType as "jpg" | "pdf",
+          format: mimeType as "jpg" | "pdf"
         });
       };
 
@@ -125,7 +125,7 @@ const updateBookController = async (req: Request, res: Response, next: NextFunct
       await Promise.all(
         [
           files.coverImage?.[0] && fs.promises.unlink(getUploadPath(files.coverImage[0].filename)),
-          files.file?.[0] && fs.promises.unlink(getUploadPath(files.file[0].filename)),
+          files.file?.[0] && fs.promises.unlink(getUploadPath(files.file[0].filename))
         ].filter(Boolean)
       );
     }
@@ -138,14 +138,14 @@ const updateBookController = async (req: Request, res: Response, next: NextFunct
         genre: genre || book.genre,
         description: description || book.description,
         coverImage: uploadResults.coverImage || book.coverImage,
-        file: uploadResults.file || book.file,
+        file: uploadResults.file || book.file
       },
       { new: true }
     );
 
     return res.json({
       message: "Book updated successfully",
-      book: updatedBook,
+      book: updatedBook
     });
   } catch (error) {
     console.error("Update book error:", error);
@@ -167,7 +167,7 @@ const getMyBooksController = async (req: Request, res: Response, next: NextFunct
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
-      bookModel.countDocuments({ author: _req.userId }),
+      bookModel.countDocuments({ author: _req.userId })
     ]);
 
     return res.json({
@@ -178,8 +178,8 @@ const getMyBooksController = async (req: Request, res: Response, next: NextFunct
         totalBooks,
         booksPerPage: limit,
         hasNextPage: page * limit < totalBooks,
-        hasPrevPage: page > 1,
-      },
+        hasPrevPage: page > 1
+      }
     });
   } catch (error) {
     return next(createHttpError(500, "Error fetching books"));
@@ -194,7 +194,7 @@ const getAllBooksController = async (req: Request, res: Response, next: NextFunc
 
     const [books, totalBooks] = await Promise.all([
       bookModel.find().populate("author", "name").sort({ createdAt: -1 }).skip(skip).limit(limit),
-      bookModel.countDocuments(),
+      bookModel.countDocuments()
     ]);
 
     return res.json({
@@ -205,8 +205,8 @@ const getAllBooksController = async (req: Request, res: Response, next: NextFunc
         totalBooks,
         booksPerPage: limit,
         hasNextPage: page * limit < totalBooks,
-        hasPrevPage: page > 1,
-      },
+        hasPrevPage: page > 1
+      }
     });
   } catch (error) {
     return next(createHttpError(500, "Error fetching books"));
@@ -251,7 +251,7 @@ const deleteBookController = async (req: Request, res: Response, next: NextFunct
 
     await Promise.all([
       cloudinary.uploader.destroy(`book-covers/${coverImagePublicId}`),
-      cloudinary.uploader.destroy(`book-pdfs/${filePublicId}`),
+      cloudinary.uploader.destroy(`book-pdfs/${filePublicId}`)
     ]);
 
     // Delete book from database
@@ -259,7 +259,7 @@ const deleteBookController = async (req: Request, res: Response, next: NextFunct
 
     return res.json({
       message: "Book deleted successfully",
-      deletedBookId: bookId,
+      deletedBookId: bookId
     });
   } catch (error) {
     console.error("Delete book error:", error);
@@ -273,5 +273,5 @@ export {
   getMyBooksController,
   getAllBooksController,
   getBookByIdController,
-  deleteBookController,
+  deleteBookController
 };

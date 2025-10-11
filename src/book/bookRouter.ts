@@ -9,7 +9,7 @@ import {
   getMyBooksController,
   getAllBooksController,
   getBookByIdController,
-  deleteBookController,
+  deleteBookController
 } from "./bookController.js";
 import authenticate from "../middlewares/authenticate.js";
 
@@ -19,7 +19,7 @@ const bookRouter = express.Router();
 const upload = multer({
   dest: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../public/data/uploads"),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB in bytes
+    fileSize: 10 * 1024 * 1024 // 10MB in bytes
   },
 
   fileFilter: (_req, file, callback) => {
@@ -38,7 +38,7 @@ const upload = multer({
 
     // If all validations pass
     callback(null, true);
-  },
+  }
 });
 
 // upload.single for single file and upload.fields for multiple images
@@ -66,12 +66,12 @@ bookRouter.post(
   upload.fields([
     {
       name: "coverImage",
-      maxCount: 1,
+      maxCount: 1
     },
     {
       name: "file",
-      maxCount: 1,
-    },
+      maxCount: 1
+    }
   ]),
   handleMulterError,
   createBookController
@@ -83,12 +83,12 @@ bookRouter.patch(
   upload.fields([
     {
       name: "coverImage",
-      maxCount: 1,
+      maxCount: 1
     },
     {
       name: "file",
-      maxCount: 1,
-    },
+      maxCount: 1
+    }
   ]),
   handleMulterError,
   updateBookController

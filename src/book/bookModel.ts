@@ -5,29 +5,29 @@ const bookSchema = new mongoose.Schema<Book>(
   {
     title: {
       type: String,
-      required: true,
+      required: true
     },
     description: {
       type: String,
-      required: true,
+      required: true
     },
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // ref to UserModel user
-      required: true,
+      required: true
     },
     genre: {
       type: String,
-      required: true,
+      required: true
     },
     coverImage: {
       type: String,
-      required: true,
+      required: true
     },
     file: {
       type: String,
-      required: true,
-    },
+      required: true
+    }
   },
   { timestamps: true }
 );

@@ -9,14 +9,14 @@ const app = express();
 
 app.use(
   cors({
-    origin: _config.frontendDomain,
+    origin: _config.frontendDomain
   })
 );
 app.use(express.json());
 
 app.get("/", (req, res) => {
   res.json({
-    data: "sureshalabani",
+    data: "sureshalabani"
   });
 });
 
