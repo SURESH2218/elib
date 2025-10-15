@@ -19,7 +19,7 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 
 # Copy PM2 config
-COPY ecosystem.config.js ./
+COPY ecosystem.config.cjs ./
 
 # Install PM2 globally
 RUN npm install -g pm2
