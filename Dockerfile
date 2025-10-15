@@ -35,4 +35,4 @@ USER node
 EXPOSE 8000
 
 # Start with PM2
-CMD ["pm2-runtime", "start", "ecosystem.config.js"]
+CMD ["pm2-runtime", "start", "ecosystem.config.cjs"]
