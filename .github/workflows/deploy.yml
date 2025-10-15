@@ -220,7 +220,7 @@ jobs:
             
             # Deploy with zero downtime
             echo "🔄 Deploying new version..."
-            docker-compose -f docker-compose.prod.yml up -d --no-deps backendapi
+            docker-compose -f docker-compose.prod.yml up -d
             
             # Wait for health check
             echo "⏳ Waiting for health check..."
