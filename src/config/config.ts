@@ -4,7 +4,7 @@ conf();
 const _config = {
   env: process.env.NODE_ENV,
   port: process.env.PORT,
-  databaseUrl: process.env.MONGO_CONNECTION_STRING as string,
+  databaseUrl: process.env.MONGO_URI as string,
   jwtsecret: process.env.JWT_SECRET,
   cloudinaryCloud: process.env.CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUD_API_KEY,
