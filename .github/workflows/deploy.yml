@@ -136,7 +136,7 @@ jobs:
             echo "🔐 Logging into ECR..."
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
             
-            # Pull new image
+            # Pull new image FIRST (while old container still running)
             echo "📥 Pulling new image: $IMAGE_TAG"
             docker pull "$IMAGE_TAG"
             
@@ -147,6 +147,7 @@ jobs:
             # Ensure MongoDB is running
             if ! docker ps | grep -q mongodb-server; then
               echo "🔄 Starting MongoDB..."
+              docker network create elib-backend_elib-network 2>/dev/null || true
               docker run -d \
                 --name mongodb-server \
                 --network elib-backend_elib-network \
@@ -155,9 +156,6 @@ jobs:
                 -v mongo-data:/data/db \
                 --restart unless-stopped \
                 mongo:7.0 || echo "MongoDB already exists, continuing..."
-              
-              # Create network if doesn't exist
-              docker network create elib-backend_elib-network 2>/dev/null || true
               
               # Wait for MongoDB
               sleep 10
@@ -171,12 +169,14 @@ jobs:
               CURRENT_CONTAINER=elib-backend-server
               NEW_CONTAINER=elib-backend-server-new
               NEW_PORT=8001
+              CURRENT_PORT=8000
               echo "📍 Current container: elib-backend-server (port 8000)"
               echo "📍 New container: elib-backend-server-new (port 8001)"
             else
               CURRENT_CONTAINER=elib-backend-server-new
               NEW_CONTAINER=elib-backend-server
               NEW_PORT=8000
+              CURRENT_PORT=8001
               echo "📍 Current container: elib-backend-server-new (port 8001)"
               echo "📍 New container: elib-backend-server (port 8000)"
             fi
@@ -219,14 +219,32 @@ jobs:
               exit 1
             fi
             
-            # Give nginx time to detect the new backend
-            echo "✅ New container is serving traffic via nginx"
-            sleep 5
+            # CRITICAL: Wait for nginx to detect new backend AND drain existing connections
+            echo "⏳ Waiting 45 seconds for nginx connection draining..."
+            echo "   - Nginx detecting new backend health"
+            echo "   - Existing connections completing"
+            echo "   - New requests routing to new container"
             
-            # Stop and remove old container
+            for i in {45..1}; do
+              echo -ne "   Countdown: ${i}s remaining...\r"
+              sleep 1
+            done
+            echo ""
+            
+            # Verify new container is still healthy after wait
+            if ! docker exec $NEW_CONTAINER wget --quiet --tries=1 --spider http://localhost:8000/health 2>/dev/null; then
+              echo "❌ New container became unhealthy during wait!"
+              docker logs --tail 50 $NEW_CONTAINER
+              docker rm -f $NEW_CONTAINER
+              exit 1
+            fi
+            
+            echo "✅ Connection draining complete, both containers serving traffic"
+            
+            # Stop and remove old container (graceful shutdown)
             if docker ps -a | grep -q $CURRENT_CONTAINER; then
-              echo "🗑️ Removing old container: $CURRENT_CONTAINER..."
-              docker stop $CURRENT_CONTAINER 2>/dev/null || true
+              echo "🗑️ Gracefully stopping old container: $CURRENT_CONTAINER..."
+              docker stop -t 30 $CURRENT_CONTAINER 2>/dev/null || true
               docker rm $CURRENT_CONTAINER 2>/dev/null || true
               echo "✅ Old container removed"
             fi
@@ -242,6 +260,7 @@ jobs:
             echo ""
             echo "✅ Blue-green deployment completed successfully!"
             echo "🌐 Active container: $NEW_CONTAINER on port $NEW_PORT"
+            echo "📊 Old container on port $CURRENT_PORT has been removed"
 
       - name: Deployment Status
         if: success()
