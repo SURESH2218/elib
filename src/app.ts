@@ -22,7 +22,8 @@ app.get("/", (req, res) => {
 
 app.get("/health", (req, res) => {
   res.status(200).json({
-    status: "ok testing status for zero down time",
+    status: "ok",
+    testing:'Testing whether we achieved zero down time or not through blue green deployment',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
