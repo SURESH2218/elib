@@ -101,11 +101,15 @@ jobs:
           AWS_REGION: ${{ env.AWS_REGION }}
           MONGO_URI: ${{ secrets.MONGO_URI_PROD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET_PROD }}
+          CLOUD_NAME: ${{ secrets.CLOUD_NAME }}
+          CLOUD_API_KEY: ${{ secrets.CLOUD_API_KEY }}
+          CLOUD_API_SECRET: ${{ secrets.CLOUD_API_SECRET }}
+          FRONTEND_DOMAIN: ${{ secrets.FRONTEND_DOMAIN }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,AWS_REGION,MONGO_URI,JWT_SECRET
+          envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,AWS_REGION,MONGO_URI,JWT_SECRET,CLOUD_NAME,CLOUD_API_KEY,CLOUD_API_SECRET,FRONTEND_DOMAIN
           script: |
             #!/bin/bash
             set -e
@@ -154,8 +158,13 @@ jobs:
                   - elib-network
                 environment:
                   - NODE_ENV=production
+                  - PORT=8000
                   - MONGO_URI=$MONGO_URI
                   - JWT_SECRET=$JWT_SECRET
+                  - CLOUD_NAME=$CLOUD_NAME
+                  - CLOUD_API_KEY=$CLOUD_API_KEY
+                  - CLOUD_API_SECRET=$CLOUD_API_SECRET
+                  - FRONTEND_DOMAIN=$FRONTEND_DOMAIN
                 depends_on:
                   mongoserver:
                     condition: service_healthy
