@@ -219,8 +219,11 @@ jobs:
             ENV_EOF
             
             # Deploy with zero downtime
-            echo "🔄 Deploying new version..."
-            docker-compose -f docker-compose.prod.yml up -d
+            # First, ensure MongoDB is running (only runs if not already up)
+            docker-compose -f docker-compose.prod.yml up -d mongoserver
+
+            # Then update backend with zero downtime
+            docker-compose -f docker-compose.prod.yml up -d --no-deps backendapi
             
             # Wait for health check
             echo "⏳ Waiting for health check..."
