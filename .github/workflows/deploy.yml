@@ -3,9 +3,8 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - main # Deploy when pushing to main
-      - develop # Or develop for staging
-  workflow_dispatch: # Manual trigger
+      - main
+  workflow_dispatch:
 
 env:
   ECR_REPOSITORY: elib-backend
@@ -20,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
+      image-tag: ${{ steps.meta.outputs.image-tag }}  # ✅ FIXED: Match the key name
 
     steps:
       - name: Checkout code
@@ -47,10 +46,17 @@ jobs:
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           IMAGE_TAG="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:sha-${SHORT_SHA}"
           LATEST_TAG="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest"
-
+          
+          # ✅ CRITICAL: Set the output with correct key
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          
+          # Also set as env for this step
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
+          
+          # Debug: Print the values
+          echo "Generated IMAGE_TAG: ${IMAGE_TAG}"
+          echo "Generated LATEST_TAG: ${LATEST_TAG}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -92,6 +98,15 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Debug - Print image tag
+        run: |
+          echo "🔍 DEBUG: Image tag from build job:"
+          echo "IMAGE_TAG: ${{ needs.build.outputs.image-tag }}"
+          if [ -z "${{ needs.build.outputs.image-tag }}" ]; then
+            echo "❌ ERROR: IMAGE_TAG is empty!"
+            exit 1
+          fi
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.0
         env:
@@ -113,24 +128,32 @@ jobs:
           script: |
             #!/bin/bash
             set -e
-
+            
             echo "🚀 Starting deployment..."
-
+            echo "📦 Image to deploy: $IMAGE_TAG"
+            
+            # Verify IMAGE_TAG is not empty
+            if [ -z "$IMAGE_TAG" ]; then
+              echo "❌ ERROR: IMAGE_TAG is empty!"
+              exit 1
+            fi
+            
             # Login to ECR
+            echo "🔐 Logging into ECR..."
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
-
+            
             # Pull new image
             echo "📥 Pulling new image: $IMAGE_TAG"
-            docker pull $IMAGE_TAG
-
+            docker pull "$IMAGE_TAG"
+            
             # Create deployment directory if not exists
             mkdir -p ~/elib-backend
             cd ~/elib-backend
-
+            
             # Create docker-compose.prod.yml with new image
-            cat > docker-compose.prod.yml <<EOF
+            cat > docker-compose.prod.yml <<'COMPOSE_EOF'
             version: '3.8'
-
+            
             services:
               mongoserver:
                 image: mongo:7.0
@@ -148,9 +171,9 @@ jobs:
                   interval: 10s
                   timeout: 5s
                   retries: 5
-
+            
               backendapi:
-                image: $IMAGE_TAG
+                image: ${IMAGE_TAG}
                 container_name: elib-backend-server
                 ports:
                   - "8000:8000"
@@ -159,12 +182,12 @@ jobs:
                 environment:
                   - NODE_ENV=production
                   - PORT=8000
-                  - MONGO_URI=$MONGO_URI
-                  - JWT_SECRET=$JWT_SECRET
-                  - CLOUD_NAME=$CLOUD_NAME
-                  - CLOUD_API_KEY=$CLOUD_API_KEY
-                  - CLOUD_API_SECRET=$CLOUD_API_SECRET
-                  - FRONTEND_DOMAIN=$FRONTEND_DOMAIN
+                  - MONGO_URI=${MONGO_URI}
+                  - JWT_SECRET=${JWT_SECRET}
+                  - CLOUD_NAME=${CLOUD_NAME}
+                  - CLOUD_API_KEY=${CLOUD_API_KEY}
+                  - CLOUD_API_SECRET=${CLOUD_API_SECRET}
+                  - FRONTEND_DOMAIN=${FRONTEND_DOMAIN}
                 depends_on:
                   mongoserver:
                     condition: service_healthy
@@ -175,35 +198,56 @@ jobs:
                   timeout: 5s
                   retries: 3
                   start_period: 40s
-
+            
             networks:
               elib-network:
                 driver: bridge
-
+            
             volumes:
               mongo-data:
-            EOF
-
+            COMPOSE_EOF
+            
+            # Create .env file with all variables
+            cat > .env <<ENV_EOF
+            IMAGE_TAG=$IMAGE_TAG
+            MONGO_URI=$MONGO_URI
+            JWT_SECRET=$JWT_SECRET
+            CLOUD_NAME=$CLOUD_NAME
+            CLOUD_API_KEY=$CLOUD_API_KEY
+            CLOUD_API_SECRET=$CLOUD_API_SECRET
+            FRONTEND_DOMAIN=$FRONTEND_DOMAIN
+            ENV_EOF
+            
             # Deploy with zero downtime
             echo "🔄 Deploying new version..."
-            docker-compose -f docker-compose.prod.yml up -d --no-deps --build backendapi
-
+            docker-compose -f docker-compose.prod.yml up -d --no-deps backendapi
+            
             # Wait for health check
             echo "⏳ Waiting for health check..."
             sleep 15
-
+            
             # Verify deployment
             if docker ps | grep -q elib-backend-server; then
               echo "✅ Deployment successful!"
               
+              # Test health endpoint
+              echo "🏥 Testing health endpoint..."
+              if wget --quiet --tries=3 --spider http://localhost:8000/health; then
+                echo "✅ Health check passed!"
+              else
+                echo "⚠️  Health check failed but container is running"
+              fi
+              
               # Cleanup old images (keep last 3)
+              echo "🧹 Cleaning up old images..."
               docker images $ECR_REGISTRY/$ECR_REPOSITORY --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR>3 {print $1}' | xargs -r docker rmi || true
               
               # Show running containers
+              echo "📊 Running containers:"
               docker ps --filter "name=elib"
             else
               echo "❌ Deployment failed! Rolling back..."
-              docker-compose -f docker-compose.prod.yml logs backendapi
+              docker-compose -f docker-compose.prod.yml logs --tail 100 backendapi
               exit 1
             fi
 
@@ -212,8 +256,14 @@ jobs:
         run: |
           echo "🎉 Deployment completed successfully!"
           echo "🌐 Application URL: http://${{ secrets.EC2_HOST }}:8000"
+          echo "🏥 Health Check: http://${{ secrets.EC2_HOST }}:8000/health"
 
       - name: Notify on Failure
         if: failure()
         run: |
           echo "❌ Deployment failed! Check logs above."
+          echo "💡 Common issues:"
+          echo "  - IMAGE_TAG is empty"
+          echo "  - ECR authentication failed"
+          echo "  - Health check timeout"
+          echo "  - Missing environment variables"
