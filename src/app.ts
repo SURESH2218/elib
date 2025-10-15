@@ -22,7 +22,7 @@ app.get("/", (req, res) => {
 
 app.get("/health", (req, res) => {
   res.status(200).json({
-    status: "ok",
+    status: "ok testing status for zero down time",
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
